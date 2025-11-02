@@ -3,41 +3,36 @@ import TableComponent from '../components/TableComponent';
 import AppLayout from '@/layouts/app-layout';
 import { BreadcrumbItem } from '@/types';
 import { usermanagement } from '@/routes';
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
+
+interface Position {
+    id: number;
+    title: string;
+}
+
+interface Status {
+    id: number;
+    title: string;
+}
 
 interface User {
     id: number;
-    name: string;
-    position: string;
+    first_name: string;
+    last_name: string;
     email: string;
-    status: 'Active' | 'Inactive';
+    position_id: number;
+    status_id: number;
+    created_at: string;
+    position?: Position;
+    status?: Status;
 }
 
-const userInfo: User[] = [
-    {
-        id: 1,
-        name: 'John Doe',
-        position: 'Librarian',
-        email: 'john.doe@library.com',
-        status: 'Active',
-    },
-    {
-        id: 2,
-        name: 'Jane Smith',
-        position: 'Student',
-        email: 'jane.smith@student.edu',
-        status: 'Active',
-    },
-    {
-        id: 3,
-        name: 'Bob Wilson',
-        position: 'Admin',
-        email: 'bob.wilson@library.com',
-        status: 'Inactive',
-    },
-];
+interface PageProps {
+    users: User[];
+}
 
 function UserManagementPage() {
+    const { users } = usePage<PageProps>().props;
     const [searchTerm, setSearchTerm] = useState<string>('');
 
     const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -48,17 +43,31 @@ function UserManagementPage() {
         setSearchTerm('');
     };
 
-    // Safe filter function with error handling
-    const filteredUsers = userInfo.filter((user: User) => {
-        if (!user) return false;
-
-        const searchLower = searchTerm.toLowerCase();
-        return (
-            (user.name?.toLowerCase() || '').includes(searchLower) ||
-            (user.position?.toLowerCase() || '').includes(searchLower) ||
-            (user.email?.toLowerCase() || '').includes(searchLower)
-        );
+    // Format user data for the table
+    const formatUserData = (user: User) => ({
+        id: user.id.toString(), // Ensure it's a string
+        name: `${user.first_name} ${user.last_name}`,
+        position: user.position?.title || 'No Position',
+        email: user.email,
+        status: user.status?.title || 'Unknown',
+        rawData: user // Keep original data for actions
     });
+
+    // Safe filter function with error handling
+    const filteredUsers = users
+        .map(formatUserData)
+        .filter((user) => {
+            if (!user) return false;
+
+            const searchLower = searchTerm.toLowerCase();
+            return (
+                (user.name?.toLowerCase() || '').includes(searchLower) ||
+                (user.position?.toLowerCase() || '').includes(searchLower) ||
+                (user.email?.toLowerCase() || '').includes(searchLower) ||
+                (user.status?.toLowerCase() || '').includes(searchLower)
+            );
+        });
+
 
     const handleEdit = (user: User): void => {
         console.log('Edit:', user);
@@ -68,9 +77,11 @@ function UserManagementPage() {
         console.log('Delete:', user);
     };
 
-    const activeUsersCount = userInfo.filter((u: User) => u.status === 'Active').length;
-    const staffMembersCount = userInfo.filter((u: User) => u.position !== 'Student').length;
-
+    const totalUsers = users.length;
+    const activeUsersCount = users.filter((u: User) => u.status?.title === 'Active').length;
+    const studentMembersCount = users.filter((u: User) =>
+        u.position?.title === 'Librarian' || u.position?.title === 'Administrator'
+    ).length;
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'User Management',
@@ -186,7 +197,7 @@ function UserManagementPage() {
                                 <div>
                                     <p className='text-gray-400 text-sm'>Total Users</p>
                                     <p className='text-2xl font-bold text-white'>
-                                        {userInfo.length}
+                                        {totalUsers}
                                     </p>
                                 </div>
                                 <div className='p-2 bg-blue-600/20 rounded-lg'>
@@ -236,7 +247,7 @@ function UserManagementPage() {
                                 <div>
                                     <p className='text-gray-400 text-sm'>Staff Members</p>
                                     <p className='text-2xl font-bold text-purple-400'>
-                                        {staffMembersCount}
+                                        {studentMembersCount}
                                     </p>
                                 </div>
                                 <div className='p-2 bg-purple-600/20 rounded-lg'>

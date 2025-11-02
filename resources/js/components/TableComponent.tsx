@@ -100,7 +100,7 @@ function TableComponent({
             case 'actions':
                 return <ActionButtons item={item} />;
 
-            case 'id':
+            case 'userid':
             case 'bookid':
                 return (
                     <span className="font-medium text-gray-900 dark:text-white">

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
@@ -14,9 +15,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
-    Route::get('usermanagement', function () {
-        return Inertia::render('usermanagement');
-    })->name('usermanagement');
+    Route::get('usermanagement', [UserController::class, 'index'])->name('usermanagement');
     Route::get('borrowreturn', function () {
         return Inertia::render('borrowreturn');
     })->name('borrowreturn');
