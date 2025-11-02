@@ -21,6 +21,6 @@ class PositionSeeder extends Seeder
             ['title' => 'Faculty'],
         ];
 
-        DB::table('position')->insert($positions);
+        DB::table('positions')->insert($positions);
     }
 }
