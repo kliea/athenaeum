@@ -87,6 +87,6 @@ class StatusSeeder extends Seeder
             // ],
         ];
 
-        DB::table('status')->insert($statuses);
+        DB::table('statuses')->insert($statuses);
     }
 }
