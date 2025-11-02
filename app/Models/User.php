@@ -19,9 +19,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
+        'position_id',
+        'status_id',
     ];
 
     /**
@@ -48,5 +51,35 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+    // Relationships
+    public function position()
+    {
+        return $this->belongsTo(Position::class);
+    }
+
+    public function status()
+    {
+        return $this->belongsTo(Status::class);
+    }
+
+    public function staff()
+    {
+        return $this->hasOne(Staff::class);
+    }
+
+    public function isStaff()
+    {
+        return $this->staff !== null;
+    }
+
+    public function borrowedBooks()
+    {
+        return $this->hasMany(BookLoan::class, 'borrower_id');
+    }
+
+    public function processedLoans()
+    {
+        return $this->hasMany(BookLoan::class, 'staff_id');
     }
 }
