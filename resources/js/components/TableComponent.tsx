@@ -25,17 +25,17 @@ interface ActionButtonsProps {
     item: TableItem;
 }
 
-interface TableComponentProps {
-    data: TableItem[];
+interface TableComponentProps<T extends TableItem> {
+    data: T[];
     columns: string[];
     variant?: 'default' | 'dashboard' | 'management';
-    onEdit?: (item: TableItem) => void;
-    onDelete?: (item: TableItem) => void;
-    onStatusChange?: (item: TableItem) => void;
+    onEdit?: (item: T) => void;
+    onDelete?: (item: T) => void;
+    onStatusChange?: (item: T) => void;
     emptyMessage?: string;
 }
 
-function TableComponent({
+function TableComponent<T extends TableItem>({
     data,
     columns,
     variant = 'default', // 'default' | 'dashboard' | 'management'
@@ -43,7 +43,7 @@ function TableComponent({
     onDelete,
     onStatusChange,
     emptyMessage = 'No data found',
-}: TableComponentProps) {
+}: TableComponentProps<T>) {
     // Status badge component
     const StatusBadge = ({ status }: StatusBadgeProps) => {
         const statusConfig = {
@@ -66,7 +66,7 @@ function TableComponent({
     };
 
     // Action buttons component
-    const ActionButtons = ({ item }: ActionButtonsProps) => {
+    const ActionButtons = ({ item }: { item: T }) => {
         if (variant !== 'management') return null;
 
         return (
@@ -90,7 +90,7 @@ function TableComponent({
     console.log('TableComponent data:', data);
 
     // Render cell content based on column type
-    const renderCellContent = (item: TableItem, column: string) => {
+    const renderCellContent = (item: T, column: string) => {
         const columnKey = column.toLowerCase().replace(/\s+/g, '');
 
         switch (columnKey) {

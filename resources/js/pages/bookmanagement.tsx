@@ -1,59 +1,71 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import TableComponent from '../components/TableComponent';
-import App from '@/actions/App';
 import AppLayout from '@/layouts/app-layout';
-import { Head } from '@inertiajs/react';
-import { BreadcrumbItem } from '@/types';
+import { Head, router, usePage } from '@inertiajs/react';
+import { BreadcrumbItem, PageProps, Paginated, Author, Book } from '@/types';
 import { bookmanagement } from '@/routes';
+import BookForm from '@/components/BookForm';
+import Pagination from '@/components/pagination';
+import { debounce } from 'lodash';
+import booksRoutes from '@/routes/books'; // Import Wayfinder routes
 
-interface Book {
-    id: number;
-    title: string;
-    author: string;
-    status: 'Available' | 'Borrowed';
-    actions: string;
+interface BookPageProps extends PageProps {
+    books: Paginated<Book>;
+    authors: Author[];
+    filters: {
+        search: string;
+    };
 }
 
-const bookInfo: Book[] = [
-    {
-        id: 1,
-        title: 'The Great Gatsby',
-        author: 'F. Scott Fitzgerald',
-        status: 'Available',
-        actions: 'Edit | Delete',
-    },
-    {
-        id: 2,
-        title: 'To Kill a Mockingbird',
-        author: 'Harper Lee',
-        status: 'Borrowed',
-        actions: 'Edit | Delete',
-    },
-];
+const BookManagementPage = () => {
+    const { books, authors, filters } = usePage<BookPageProps>().props;
+    const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
+    const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
+    const [isFormOpen, setIsFormOpen] = useState(false);
 
-const BookManagementPage: React.FC = () => {
-    const [searchTerm, setSearchTerm] = useState<string>('');
+    const debouncedSearch = debounce((term: string) => {
+        router.get(bookmanagement().url, { search: term }, { preserveState: true, replace: true });
+    }, 300);
 
-    // Filter books based on search
-    const filteredBooks = bookInfo.filter(
-        (book) =>
-            book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            book.author.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-
-    const handleEdit = (book: Book) => {
-        console.log('Edit:', book);
-        // Implement edit logic
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const term = e.target.value;
+        setSearchTerm(term);
+        debouncedSearch(term);
     };
 
-    const handleDelete = (book: Book) => {
-        console.log('Delete:', book);
-        // Implement delete logic
+    const formatBookData = (book: Book) => ({
+        id: book.id,
+        title: book.title,
+        author: book.authors.map(a => `${a.first_name} ${a.last_name}`).join(', '),
+        status: book.status?.title || 'Unknown',
+        rawData: book
+    });
+
+    const formattedBooks = books.data.map(formatBookData);
+
+    const handleEdit = (item: ReturnType<typeof formatBookData>) => {
+        setEditingBook(item.rawData);
+        setIsFormOpen(true);
+    };
+
+    const handleDelete = (item: ReturnType<typeof formatBookData>) => {
+        const destroyUrl = booksRoutes.destroy.url({ book: item.rawData.id });
+        if (confirm('Are you sure you want to delete this book?')) {
+            router.delete(destroyUrl, {
+                onSuccess: () => {
+                    router.reload({ only: ['books'] });
+                },
+                onError: (errors) => {
+                    console.error('Delete error:', errors);
+                    alert('Failed to delete book.');
+                },
+            });
+        }
     };
 
     const handleAddNewBook = () => {
-        console.log('Add new book clicked');
-        // Implement add new book logic
+        setEditingBook(undefined);
+        setIsFormOpen(true);
     };
 
     const handleFilter = () => {
@@ -68,7 +80,7 @@ const BookManagementPage: React.FC = () => {
         },
     ];
     return (
-        <AppLayout>
+        <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Book Management" />
 
             <div className='p-4'>
@@ -80,7 +92,7 @@ const BookManagementPage: React.FC = () => {
                                 Book Collection
                             </h2>
                             <p className='text-gray-300'>
-                                {filteredBooks.length} book{filteredBooks.length !== 1 ? 's' : ''}{' '}
+                                {books.total} book{books.total !== 1 ? 's' : ''}{' '}
                                 found
                             </p>
                         </div>
@@ -106,7 +118,7 @@ const BookManagementPage: React.FC = () => {
                                     type='text'
                                     placeholder='Search books...'
                                     value={searchTerm}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                                    onChange={handleSearchChange}
                                     className='pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 w-full'
                                 />
                             </div>
@@ -156,7 +168,7 @@ const BookManagementPage: React.FC = () => {
 
                     {/* Table */}
                     <TableComponent
-                        data={filteredBooks}
+                        data={formattedBooks}
                         columns={[
                             'Book ID',
                             'Book Title',
@@ -169,7 +181,17 @@ const BookManagementPage: React.FC = () => {
                         onDelete={handleDelete}
                         emptyMessage='No books to manage'
                     />
+                    <div className="mt-4">
+                        <Pagination links={books.links} meta={books} />
+                    </div>
                 </div>
+                {isFormOpen && (
+                    <BookForm
+                        book={editingBook}
+                        authors={authors}
+                        onClose={() => setIsFormOpen(false)}
+                    />
+                )}
             </div>
         </AppLayout>
     );

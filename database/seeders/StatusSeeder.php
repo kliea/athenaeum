@@ -43,11 +43,11 @@ class StatusSeeder extends Seeder
                 'type' => 'book',
                 'description' => 'Book is currently borrowed',
             ],
-            // [
-            //     'title' => 'Lost',
-            //     'type' => 'book',
-            //     'description' => 'Book has been reported as lost',
-            // ],
+            [
+                'title' => 'Lost',
+                'type' => 'book',
+                'description' => 'Book has been reported as lost',
+            ],
             // [
             //     'title' => 'Damaged',
             //     'type' => 'book',

@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             PositionSeeder::class,
             StatusSeeder::class,
             UserSeeder::class,
+            AuthorSeeder::class,
+            BookSeeder::class,
             // Add other seeders here
         ]);
     }

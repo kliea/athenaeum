@@ -1,25 +1,31 @@
 import App from '@/actions/App';
 import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/react';
+import { BreadcrumbItem, PageProps, Book, User } from '@/types';
+import { Head, usePage } from '@inertiajs/react';
 import { Card } from '@/components/ui/card';
-import React from 'react';
+import React, { useState } from 'react';
 import {
     HiMiniDocumentArrowUp,
     HiMiniDocumentArrowDown,
 } from 'react-icons/hi2';
 import { borrowreturn } from '@/routes';
+import ManualEntryModal from '@/components/ManualEntryModal';
+
+interface BorrowReturnProps extends PageProps {
+    books: Book[];
+    users: User[];
+}
 
 const BorrowReturnPage: React.FC = () => {
-    const handleScanQR = (action: 'borrow' | 'return') => {
-        console.log(`Scan QR for ${action}`);
-        // Implement QR scanning logic
-    };
+    const { books, users } = usePage<BorrowReturnProps>().props;
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalAction, setModalAction] = useState<'borrow' | 'return'>('borrow');
 
     const handleManualEntry = (action: 'borrow' | 'return') => {
-        console.log(`Manual entry for ${action}`);
-        // Implement manual entry logic
+        setModalAction(action);
+        setIsModalOpen(true);
     };
+
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Borrow/Return',
@@ -49,20 +55,14 @@ const BorrowReturnPage: React.FC = () => {
                             <HiMiniDocumentArrowUp className='size-8 text-blue-400' />
                         </div>
                         <p className='text-gray-300 mb-6 leading-relaxed'>
-                            Track book borrowing with QR scanning or manual entry
+                            Track book borrowing with manual entry
                         </p>
-                        <div className='flex flex-col sm:flex-row justify-between items-center gap-4'>
-                            <button
-                                onClick={() => handleScanQR('borrow')}
-                                className='w-full sm:w-auto px-6 py-3 border-2 border-teal-400 text-teal-400 rounded-lg hover:bg-teal-400 hover:text-white transition-colors duration-200 font-medium'
-                            >
-                                Scan QR
-                            </button>
+                        <div className='flex justify-center'>
                             <button
                                 onClick={() => handleManualEntry('borrow')}
-                                className='w-full sm:w-auto px-6 py-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors duration-200 font-medium shadow-lg'
+                                className='w-full px-6 py-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors duration-200 font-medium shadow-lg'
                             >
-                                Manual Entry
+                                Borrow Book
                             </button>
                         </div>
                     </Card>
@@ -74,25 +74,27 @@ const BorrowReturnPage: React.FC = () => {
                             <HiMiniDocumentArrowDown className='size-8 text-green-400' />
                         </div>
                         <p className='text-gray-300 mb-6 leading-relaxed'>
-                            Track book returning with QR scanning or manual entry
+                            Track book returning with manual entry
                         </p>
-                        <div className='flex flex-col sm:flex-row justify-between items-center gap-4'>
-                            <button
-                                onClick={() => handleScanQR('return')}
-                                className='w-full sm:w-auto px-6 py-3 border-2 border-teal-400 text-teal-400 rounded-lg hover:bg-teal-400 hover:text-white transition-colors duration-200 font-medium'
-                            >
-                                Scan QR
-                            </button>
+                        <div className='flex justify-center'>
                             <button
                                 onClick={() => handleManualEntry('return')}
-                                className='w-full sm:w-auto px-6 py-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors duration-200 font-medium shadow-lg'
+                                className='w-full px-6 py-3 bg-primary text-black rounded-lg hover:bg-primary/90 transition-colors duration-200 font-medium shadow-lg'
                             >
-                                Manual Entry
+                                Return Book
                             </button>
                         </div>
                     </Card>
                 </div>
             </div>
+
+            <ManualEntryModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                initialAction={modalAction}
+                books={books}
+                users={users}
+            />
 
         </AppLayout>
     );

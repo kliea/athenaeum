@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('book_loans', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('book_id')->constrained()->onDelete('cascade');
+            $table->foreignId('book_id')->constrained('books')->onDelete('cascade');
             $table->foreignId('staff_id')->constrained('users')->onDelete('cascade');
             $table->foreignId('borrower_id')->constrained('users')->onDelete('cascade');
             $table->timestamp('loan_date')->useCurrent();

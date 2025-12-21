@@ -1,87 +1,135 @@
-import React, { useState, ChangeEvent } from 'react';
+import React, { useState, ChangeEvent, useCallback } from 'react';
 import TableComponent from '../components/TableComponent';
 import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
+import { BreadcrumbItem, Paginated, User } from '@/types';
 import { usermanagement } from '@/routes';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
+import { UserForm } from '@/components/UserForm';
+import Pagination from '@/components/pagination';
+import { debounce } from 'lodash';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
+import usersRoutes from '@/routes/users';
 
-interface Position {
-    id: number;
-    title: string;
-}
-
-interface Status {
-    id: number;
-    title: string;
-}
-
-interface User {
-    id: number;
-    first_name: string;
-    last_name: string;
-    email: string;
-    position_id: number;
-    status_id: number;
-    created_at: string;
-    position?: Position;
-    status?: Status;
-}
 
 interface PageProps {
-    users: User[];
+    users: Paginated<User>;
+    positions: { id: number; title: string }[];
+    statuses: { id: number; title: string }[];
+    stats: {
+        total: number;
+        active: number;
+        inactive: number;
+    };
+    filters: {
+        search: string;
+    };
+    [key: string]: unknown;
 }
 
 function UserManagementPage() {
-    const { users } = usePage<PageProps>().props;
-    const [searchTerm, setSearchTerm] = useState<string>('');
+    const { users, positions, statuses, stats, filters } = usePage<PageProps>().props;
+    const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
+    const [isUserFormOpen, setIsUserFormOpen] = useState<boolean>(false);
+    const [editingUser, setEditingUser] = useState<User | undefined>(undefined);
+    // Add these states for delete modal
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+    const [userToDelete, setUserToDelete] = useState<{ id: number; name: string } | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+    const debouncedSearch = debounce((term: string) => {
+        router.get(usermanagement().url, { search: term }, { preserveState: true, replace: true });
+    }, 300);
 
     const handleSearchChange = (e: ChangeEvent<HTMLInputElement>): void => {
-        setSearchTerm(e.target.value);
+        const term = e.target.value;
+        setSearchTerm(term);
+        debouncedSearch(term);
     };
 
     const clearSearch = (): void => {
         setSearchTerm('');
+        router.get(usermanagement().url, {}, { preserveState: true, replace: true });
     };
 
-    // Format user data for the table
     const formatUserData = (user: User) => ({
-        id: user.id.toString(), // Ensure it's a string
+        id: user.id.toString(),
         name: `${user.first_name} ${user.last_name}`,
         position: user.position?.title || 'No Position',
         email: user.email,
         status: user.status?.title || 'Unknown',
-        rawData: user // Keep original data for actions
+        rawData: user
     });
 
-    // Safe filter function with error handling
-    const filteredUsers = users
-        .map(formatUserData)
-        .filter((user) => {
-            if (!user) return false;
+    const formattedUsers = users.data.map(formatUserData);
 
-            const searchLower = searchTerm.toLowerCase();
-            return (
-                (user.name?.toLowerCase() || '').includes(searchLower) ||
-                (user.position?.toLowerCase() || '').includes(searchLower) ||
-                (user.email?.toLowerCase() || '').includes(searchLower) ||
-                (user.status?.toLowerCase() || '').includes(searchLower)
-            );
+    const handleEdit = (item: ReturnType<typeof formatUserData>): void => {
+        setEditingUser(item.rawData);
+        setIsUserFormOpen(true);
+    };
+
+    // Updated handleDelete to show modal
+    const handleDelete = (item: ReturnType<typeof formatUserData>): void => {
+        setUserToDelete({
+            id: item.rawData.id,
+            name: item.name
         });
-
-
-    const handleEdit = (user: User): void => {
-        console.log('Edit:', user);
+        setIsDeleteModalOpen(true);
     };
 
-    const handleDelete = (user: User): void => {
-        console.log('Delete:', user);
+    const confirmDelete = useCallback(async (): Promise<void> => {
+        if (!userToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            // Check if destroy route exists in usersRoutes
+
+            const destroyUrl = usersRoutes.delete.url({ user: userToDelete.id });
+            console.log('Using Wayfinder destroy URL:', destroyUrl);
+
+            await router.delete(destroyUrl, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Use reload with specific keys instead of full page reload
+                    router.reload({ only: ['users', 'stats'] });
+                    setIsDeleteModalOpen(false);
+                    setUserToDelete(null);
+                },
+                onError: (errors) => {
+                    console.error('Delete error:', errors);
+                    alert('Failed to delete user. Please try again.');
+                },
+                onFinish: () => {
+                    setIsDeleting(false);
+                }
+            });
+
+        } catch (error) {
+            console.error('Delete error:', error);
+            setIsDeleting(false);
+            alert('An error occurred while deleting the user.');
+        }
+    }, [userToDelete]);
+
+    // Add close modal function
+    const closeDeleteModal = (): void => {
+        if (!isDeleting) {
+            setIsDeleteModalOpen(false);
+            setUserToDelete(null);
+        }
     };
 
-    const totalUsers = users.length;
-    const activeUsersCount = users.filter((u: User) => u.status?.title === 'Active').length;
-    const studentMembersCount = users.filter((u: User) =>
-        u.position?.title === 'Librarian' || u.position?.title === 'Administrator'
-    ).length;
+    const handleCreateUser = () => {
+        setEditingUser(undefined);
+        setIsUserFormOpen(true);
+    };
+
+    const handleUserFormOpenChange = (open: boolean) => {
+        setIsUserFormOpen(open);
+        if (!open) {
+            setEditingUser(undefined);
+        }
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'User Management',
@@ -94,21 +142,17 @@ function UserManagementPage() {
             <Head title="User Management" />
             <div className='p-4'>
                 <div className='bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-6 shadow-2xl'>
-                    {/* Header Section */}
                     <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6'>
                         <div>
                             <h2 className='text-2xl font-bold text-white mb-2'>
                                 User Management
                             </h2>
                             <p className='text-gray-300'>
-                                {filteredUsers.length} user{filteredUsers.length !== 1 ? 's' : ''}{' '}
-                                found
+                                {users.total} user{users.total !== 1 ? 's' : ''} found
                             </p>
                         </div>
 
-                        {/* Action Buttons */}
                         <div className='flex flex-col sm:flex-row gap-3 mt-4 sm:mt-0 w-full sm:w-auto'>
-                            {/* Search Bar */}
                             <div className='relative min-w-[250px]'>
                                 <svg
                                     className='w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400'
@@ -130,7 +174,6 @@ function UserManagementPage() {
                                     onChange={handleSearchChange}
                                     className='pl-10 pr-4 py-2 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 w-full'
                                 />
-                                {/* Clear search button */}
                                 {searchTerm && (
                                     <button
                                         onClick={clearSearch}
@@ -170,34 +213,35 @@ function UserManagementPage() {
                                     </svg>
                                     Filter
                                 </button>
-                                <button className='px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all duration-200 flex items-center gap-2 hover:scale-105 active:scale-95 shadow-lg shadow-blue-600/25 hover:shadow-blue-500/30'>
-                                    <svg
-                                        className='w-4 h-4'
-                                        fill='none'
-                                        stroke='currentColor'
-                                        viewBox='0 0 24 24'
-                                    >
-                                        <path
-                                            strokeLinecap='round'
-                                            strokeLinejoin='round'
-                                            strokeWidth={2}
-                                            d='M12 4v16m8-8H4'
-                                        />
-                                    </svg>
-                                    Add New User
+                                <UserForm
+                                    positions={positions}
+                                    statuses={statuses}
+                                    onOpenChange={handleUserFormOpenChange}
+                                    open={isUserFormOpen}
+                                    user={editingUser}
+                                />
+                                <button
+                                    onClick={handleCreateUser}
+                                    className='hidden' // Hidden because the UserForm trigger button handles opening, but we need to reset state. Wait, the trigger is inside UserForm.
+                                // Actually, we need to lift the trigger out or control the state from here.
+                                // The UserForm has a trigger inside it which renders the "Add New User" button if !isEditMode.
+                                // But when we click Edit in the table, we simply setOpen(true) and pass the user.
+                                // So we don't strictly need a separate button here if UserForm provides the "Add" button.
+                                // HOWEVER, TableComponent calls handleEdit.
+                                >
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Stats Cards */}
                     <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-6'>
+                        {/* Stats Cards ... kept same ... */}
                         <div className='bg-gray-800/50 rounded-lg p-4 border border-gray-700'>
                             <div className='flex items-center justify-between'>
                                 <div>
                                     <p className='text-gray-400 text-sm'>Total Users</p>
                                     <p className='text-2xl font-bold text-white'>
-                                        {totalUsers}
+                                        {stats.total}
                                     </p>
                                 </div>
                                 <div className='p-2 bg-blue-600/20 rounded-lg'>
@@ -222,7 +266,7 @@ function UserManagementPage() {
                                 <div>
                                     <p className='text-gray-400 text-sm'>Active Users</p>
                                     <p className='text-2xl font-bold text-green-400'>
-                                        {activeUsersCount}
+                                        {stats.active}
                                     </p>
                                 </div>
                                 <div className='p-2 bg-green-600/20 rounded-lg'>
@@ -245,14 +289,14 @@ function UserManagementPage() {
                         <div className='bg-gray-800/50 rounded-lg p-4 border border-gray-700'>
                             <div className='flex items-center justify-between'>
                                 <div>
-                                    <p className='text-gray-400 text-sm'>Staff Members</p>
-                                    <p className='text-2xl font-bold text-purple-400'>
-                                        {studentMembersCount}
+                                    <p className='text-gray-400 text-sm'>Inactive Users</p>
+                                    <p className='text-2xl font-bold text-red-400'>
+                                        {stats.inactive}
                                     </p>
                                 </div>
-                                <div className='p-2 bg-purple-600/20 rounded-lg'>
+                                <div className='p-2 bg-red-600/20 rounded-lg'>
                                     <svg
-                                        className='w-6 h-6 text-purple-400'
+                                        className='w-6 h-6 text-red-400'
                                         fill='none'
                                         stroke='currentColor'
                                         viewBox='0 0 24 24'
@@ -260,19 +304,18 @@ function UserManagementPage() {
                                         <path
                                             strokeLinecap='round'
                                             strokeLinejoin='round'
-                                            strokeWidth={2}
-                                            d='M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z'
-                                        />
+                                            strokeWidth='2'
+                                            d='M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636'
+                                        ></path>
                                     </svg>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Table Container */}
                     <div className='overflow-hidden rounded-lg border border-gray-700 bg-gray-800/20'>
                         <TableComponent
-                            data={filteredUsers}
+                            data={formattedUsers}
                             columns={[
                                 'User ID',
                                 'Name',
@@ -287,6 +330,17 @@ function UserManagementPage() {
                             emptyMessage='No users found matching your search'
                         />
                     </div>
+                    <Pagination links={users.links} meta={users} />
+
+                    <DeleteConfirmationModal
+                        isOpen={isDeleteModalOpen}
+                        onClose={closeDeleteModal}
+                        onConfirm={confirmDelete}
+                        title="Delete User"
+                        description="This action cannot be undone. This will permanently delete the user account and remove all associated data from our servers."
+                        userName={userToDelete?.name}
+                        isLoading={isDeleting}
+                    />
                 </div>
             </div>
         </AppLayout>

@@ -24,7 +24,7 @@ export default function Welcome({
     //     navigate('/login');
     // };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         const trimmedId = idNumber.trim();
@@ -74,131 +74,139 @@ export default function Welcome({
             <Head title="Welcome">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
-                    href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
+                    href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600|outfit:400,500,600,700"
                     rel="stylesheet"
                 />
             </Head>
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8 dark:bg-[#0a0a0a]">
-                <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl">
-                    <nav className="flex items-center justify-end gap-4">
+            <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-black font-sans text-white">
+
+                {/* Background Effects */}
+                <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0">
+                    <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-purple-900/40 blur-[100px]" />
+                    <div className="absolute bottom-[-10%] left-[-10%] w-[600px] h-[600px] rounded-full bg-blue-900/30 blur-[120px]" />
+                </div>
+
+                <header className="absolute top-0 left-0 w-full z-20 p-6 lg:p-8">
+                    <nav className="flex items-center justify-between w-full max-w-7xl mx-auto">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                                </svg>
+                            </div>
+                            <span className="text-xl font-bold tracking-tight">Athenaeum</span>
+                        </div>
+
                         {auth.user ? (
                             <Link
                                 href={dashboard()}
-                                className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
+                                className="px-5 py-2 text-sm font-medium text-white bg-white/10 hover:bg-white/20 border border-white/10 rounded-full transition-all backdrop-blur-sm"
                             >
                                 Dashboard
                             </Link>
                         ) : (
-                            <>
-                                <Link
-                                    href={login()}
-                                    className="inline-block border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white font-medium px-6 py-2.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200 shadow-sm hover:shadow-md"                               >Login
-                                </Link>
-                                {/* {canRegister && (
-                                    <Link
-                                        href={register()}
-                                        className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
-                                    >
-                                        Register
-                                    </Link>
-                                )} */}
-                            </>
+                            <Link
+                                href={login()}
+                                className="px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-full transition-all shadow-lg shadow-blue-900/20 hover:shadow-blue-600/30"
+                            >
+                                Login
+                            </Link>
                         )}
                     </nav>
                 </header>
-                <div className='flex flex-col md:flex-row flex-1 justify-center items-center gap-6 p-4 text-white'>
-                    {/* Success Alert */}
-                    {/* {showSuccess && (
-                        <Alert color='success' className='absolute top-20 z-10'>
-                            Attendance logged successfully for ID: {recentIdNumber}
-                        </Alert>
-                    )} */}
 
-                    {/* Attendance Log Card */}
-                    <Card className='p-8 bg-gray-800 rounded-xl shadow-xl w-full max-w-md'>
-                        <div className='text-center mb-2'>
-                            <div className='w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4'>
-                                <svg
-                                    className='w-8 h-8 text-white'
-                                    fill='none'
-                                    stroke='currentColor'
-                                    viewBox='0 0 24 24'>
-                                    <path
-                                        strokeLinecap='round'
-                                        strokeLinejoin='round'
-                                        strokeWidth={2}
-                                        d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'
-                                    />
-                                </svg>
-                            </div>
-                            <h1 className='text-3xl font-bold'>Athenaeum</h1>
-                            <h2 className='text-2xl text-gray-200 italic mb-2'>
-                                Attendance Log
-                            </h2>
-                            <p className='text-gray-400'>
-                                Track and manage your library visits{' '}
-                            </p>
+                <main className="relative z-10 w-full max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center justify-center gap-12 lg:gap-20">
+
+                    {/* Left Column: Hero Text */}
+                    <div className="flex-1 text-center md:text-left space-y-6">
+                        <div className="inline-block px-4 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-300 text-xs font-semibold tracking-wider uppercase mb-2">
+                            Library Management System
                         </div>
-                        <div className='mt-4 p-4 bg-gray-700 rounded-lg'>
-                            <p className='text-gray-300 text-sm'>
-                                {/* {recentIdNumber
-                                    ? `Last logged ID: ${recentIdNumber}`
-                                    : 'No attendance logged yet.'} */}
-                            </p>
+                        <h1 className="text-5xl lg:text-7xl font-bold leading-tight tracking-tight">
+                            Manage your <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400">
+                                knowledge base
+                            </span>
+                        </h1>
+                        <p className="text-lg text-gray-400 max-w-xl mx-auto md:mx-0 leading-relaxed">
+                            Welcome to Athenaeum. Track attendance, borrow books, and manage your library resources with a seamless, modern experience.
+                        </p>
+                    </div>
+
+                    {/* Right Column: Interactive Card */}
+                    <div className="w-full max-w-md">
+                        <div className="relative group">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
+                            <Card className="relative p-8 bg-black/40 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl">
+                                <div className="mb-8 text-center">
+                                    <h3 className="text-2xl font-bold text-white mb-2">
+                                        Attendance Log
+                                    </h3>
+                                    <p className="text-gray-400 text-sm">
+                                        Scan your ID to clock in or out
+                                    </p>
+                                </div>
+
+                                <form onSubmit={handleSubmit} className="space-y-5">
+                                    <div>
+                                        <Label htmlFor="idnum" className="sr-only">ID Number</Label>
+                                        <div className="relative">
+                                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
+                                                </svg>
+                                            </div>
+                                            <Input
+                                                id="idnum"
+                                                type="text"
+                                                value={idNumber}
+                                                onChange={(e) => setIdNumber(e.target.value)}
+                                                placeholder="Enter ID Number"
+                                                className="block w-full pl-10 pr-3 py-3 border border-gray-700 rounded-lg leading-5 bg-gray-900/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
+                                                required
+                                                disabled={isLoading}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
+                                        disabled={!idNumber.trim() || isLoading}
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Logging...
+                                            </>
+                                        ) : 'Submit Attendance'}
+                                    </Button>
+
+                                    {/* Status Message Area */}
+                                    {showSuccess && (
+                                        <div className="mt-4 p-3 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-sm text-center animate-fade-in-up">
+                                            Attendance logged successfully!
+                                        </div>
+                                    )}
+                                    {error && (
+                                        <div className="mt-4 p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-300 text-sm text-center animate-fade-in-up">
+                                            {error}
+                                        </div>
+                                    )}
+                                </form>
+                                <div className="mt-6 pt-6 border-t border-gray-800 text-center">
+                                    <p className="text-xs text-gray-500">
+                                        Protected by Athenaeum Security
+                                    </p>
+                                </div>
+                            </Card>
                         </div>
-                    </Card>
+                    </div>
 
-                    {/* Input Card */}
-                    <Card className='p-8 bg-gray-800 rounded-xl shadow-xl w-full max-w-md'>
-                        <h3 className='text-xl font-semibold mb-6 text-center text-white'>
-                            Clock In/Out
-                        </h3>
-
-                        <form onSubmit={handleSubmit}>
-                            <div className='mb-4'>
-                                <Label
-                                    htmlFor='idnum'
-                                    // value='ID Number'
-                                    className='text-gray-300 mb-2 block'
-                                />
-                                <Input
-                                    id='idnum'
-                                    type='text'
-                                    // sizing='md'
-                                    value={idNumber}
-                                    onChange={(e) => setIdNumber(e.target.value)}
-                                    placeholder='Enter your ID number'
-                                    className='bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                                    required
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            <Button
-                                type='submit'
-                                className='w-full transition-all duration-200 bg-blue-600 hover:bg-blue-700'
-                                // size='lg'
-                                disabled={!idNumber.trim() || isLoading}
-                            // isProcessing={isLoading}
-                            >
-                                {isLoading ? 'Processing...' : 'Submit Attendance'}
-                            </Button>
-                        </form>
-
-                        {/* Help Text */}
-                        {/* {error ? (
-                            <div className='mt-4 text-center'>
-                                <p className='text-sm text-gray-400'>{error}</p>
-                            </div>
-                        ) : (
-                            <div className='mt-4 text-center'>
-                                <p className='text-sm text-gray-400'>
-                                    Enter your ID number to log your attendance
-                                </p>
-                            </div>
-                        )} */}
-                    </Card>
-                </div>                <div className="hidden h-14.5 lg:block"></div>
+                </main>
             </div>
         </>
     );
