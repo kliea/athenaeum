@@ -338,7 +338,9 @@ function UserManagementPage() {
                         onConfirm={confirmDelete}
                         title="Delete User"
                         description="This action cannot be undone. This will permanently delete the user account and remove all associated data from our servers."
-                        userName={userToDelete?.name}
+                        itemName={userToDelete?.name}
+                        itemType="User"
+                        confirmButtonText="Delete User"
                         isLoading={isDeleting}
                     />
                 </div>

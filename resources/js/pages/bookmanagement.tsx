@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import TableComponent from '../components/TableComponent';
 import AppLayout from '@/layouts/app-layout';
 import { Head, router, usePage } from '@inertiajs/react';
@@ -7,7 +7,8 @@ import { bookmanagement } from '@/routes';
 import BookForm from '@/components/BookForm';
 import Pagination from '@/components/pagination';
 import { debounce } from 'lodash';
-import booksRoutes from '@/routes/books'; // Import Wayfinder routes
+import booksRoutes from '@/routes/books';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 
 interface BookPageProps extends PageProps {
     books: Paginated<Book>;
@@ -22,6 +23,11 @@ const BookManagementPage = () => {
     const [searchTerm, setSearchTerm] = useState<string>(filters.search || '');
     const [editingBook, setEditingBook] = useState<Book | undefined>(undefined);
     const [isFormOpen, setIsFormOpen] = useState(false);
+
+    // Delete modal states
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+    const [bookToDelete, setBookToDelete] = useState<{ id: number; title: string } | null>(null);
+    const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
     const debouncedSearch = debounce((term: string) => {
         router.get(bookmanagement().url, { search: term }, { preserveState: true, replace: true });
@@ -49,17 +55,48 @@ const BookManagementPage = () => {
     };
 
     const handleDelete = (item: ReturnType<typeof formatBookData>) => {
-        const destroyUrl = booksRoutes.destroy.url({ book: item.rawData.id });
-        if (confirm('Are you sure you want to delete this book?')) {
-            router.delete(destroyUrl, {
+        setBookToDelete({
+            id: item.rawData.id,
+            title: item.title
+        });
+        setIsDeleteModalOpen(true);
+    };
+
+    const confirmDelete = useCallback(async (): Promise<void> => {
+        if (!bookToDelete) return;
+
+        setIsDeleting(true);
+        try {
+            const destroyUrl = booksRoutes.destroy.url({ book: bookToDelete.id });
+            console.log('Using Wayfinder destroy URL for book:', destroyUrl);
+
+            await router.delete(destroyUrl, {
+                preserveScroll: true,
                 onSuccess: () => {
                     router.reload({ only: ['books'] });
+                    setIsDeleteModalOpen(false);
+                    setBookToDelete(null);
                 },
                 onError: (errors) => {
                     console.error('Delete error:', errors);
                     alert('Failed to delete book.');
                 },
+                onFinish: () => {
+                    setIsDeleting(false);
+                }
             });
+
+        } catch (error) {
+            console.error('Delete error:', error);
+            setIsDeleting(false);
+            alert('An error occurred while deleting the book.');
+        }
+    }, [bookToDelete]);
+
+    const closeDeleteModal = (): void => {
+        if (!isDeleting) {
+            setIsDeleteModalOpen(false);
+            setBookToDelete(null);
         }
     };
 
@@ -79,6 +116,7 @@ const BookManagementPage = () => {
             href: bookmanagement().url,
         },
     ];
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Book Management" />
@@ -192,6 +230,19 @@ const BookManagementPage = () => {
                         onClose={() => setIsFormOpen(false)}
                     />
                 )}
+
+                {/* Delete Confirmation Modal for Books */}
+                <DeleteConfirmationModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={closeDeleteModal}
+                    onConfirm={confirmDelete}
+                    title="Delete Book"
+                    description="This action cannot be undone. This will permanently delete the book and remove all associated data from our servers."
+                    itemName={bookToDelete?.title}
+                    itemType="Book"
+                    confirmButtonText="Delete Book"
+                    isLoading={isDeleting}
+                />
             </div>
         </AppLayout>
     );

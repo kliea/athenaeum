@@ -1,4 +1,4 @@
-// components/DeleteConfirmationModal.tsx
+// components/DeleteConfirmationModal.tsx - Simpler version
 import React from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,9 @@ interface DeleteConfirmationModalProps {
     title: string;
     description: string;
     isLoading?: boolean;
-    userName?: string;
+    itemName?: string;
+    itemType?: string; // Optional: 'User', 'Book', etc.
+    confirmButtonText?: string;
 }
 
 export function DeleteConfirmationModal({
@@ -21,7 +23,9 @@ export function DeleteConfirmationModal({
     title,
     description,
     isLoading = false,
-    userName
+    itemName,
+    itemType = 'Item', // Default to 'Item'
+    confirmButtonText = 'Delete' // Default button text
 }: DeleteConfirmationModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
@@ -33,10 +37,10 @@ export function DeleteConfirmationModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                {userName && (
+                {itemName && (
                     <div className="p-4 bg-red-900/20 border border-red-800/50 rounded-lg">
                         <p className="text-red-200 text-center font-medium">
-                            User: <span className="font-bold">{userName}</span>
+                            {itemType}: <span className="font-bold">{itemName}</span>
                         </p>
                     </div>
                 )}
@@ -64,7 +68,7 @@ export function DeleteConfirmationModal({
                                 Deleting...
                             </>
                         ) : (
-                            'Delete User'
+                            confirmButtonText
                         )}
                     </Button>
                 </DialogFooter>
