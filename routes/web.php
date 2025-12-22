@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\BookLoanController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\UserController;
 use App\Models\BookLoan;
 use Illuminate\Support\Facades\Route;
@@ -16,9 +17,22 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
+    Route::get('/dashboard', function () {
+        $controller = new DashboardController();
+
+        // Get stats - these methods now return arrays directly
+        $stats = $controller->simpleStats();
+
+        // Get recent books
+        $booksData = $controller->getRecentBooks(new \Illuminate\Http\Request());
+
+        return Inertia::render('dashboard', [
+            'stats' => $stats,
+            'recentBooks' => $booksData['data'] ?? [],
+            'totalBooks' => $booksData['total'] ?? 0,
+        ]);
     })->name('dashboard');
+
     Route::get('usermanagement', [UserController::class, 'index'])->name('usermanagement');
     // Borrow/Return Page
     Route::get('borrowreturn', function () {
@@ -39,6 +53,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('loans/manual', [BookLoanController::class, 'store'])->name('loans.manual');
     Route::get('loans/history', [BookLoanController::class, 'history'])->name('loans.history');
     Route::get('loans/active', [BookLoanController::class, 'active'])->name('loans.active');
+
+    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
+    Route::get('/dashboard/recent-books', [DashboardController::class, 'getRecentBooks']);
+    Route::get('/dashboard/recent-activity', [DashboardController::class, 'getRecentActivity']);
+    Route::get('/dashboard/borrowing-trends', [DashboardController::class, 'getBorrowingTrends']);
+    Route::get('/dashboard/top-books', [DashboardController::class, 'getTopBooks']);
+    Route::get('/dashboard/overdue-books', [DashboardController::class, 'getOverdueBooks']);
+
 
     Route::get('bookmanagement', [BookController::class, 'index'])->name('bookmanagement');
     Route::resource('books', BookController::class)->except(['index']);
