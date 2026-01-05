@@ -2,15 +2,49 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AttendanceLog;
 use App\Models\Book;
-use App\Models\BookLoan;
+use App\Models\Transaction; // Changed from BookLoan
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    /**
+     * Display the dashboard.
+     */
+    public function index(Request $request)
+    {
+        $recentAttendance = [];
+
+        // This data should only be fetched for authorized roles.
+        if ($request->user()->hasAnyRole(['admin', 'librarian'])) {
+            $recentAttendance = AttendanceLog::with('user.roles')
+                ->latest()
+                ->limit(10)
+                ->get()
+                ->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'user_name' => $log->user->name ?? 'Unknown User',
+                        'role_name' => $log->user->roles->first()->name ?? 'No Role',
+                        'time_in' => $log->time_in ? Carbon::parse($log->time_in)->format('h:i A') : null,
+                        'time_out' => $log->time_out ? Carbon::parse($log->time_out)->format('h:i A') : 'Active',
+                        'date' => Carbon::parse($log->date)->format('M d, Y'),
+                    ];
+                });
+        }
+
+        return Inertia::render('dashboard', [
+            'stats' => $this->simpleStats(),
+            'recentBooks' => $this->getRecentBooks($request),
+            'recentAttendance' => $recentAttendance,
+        ]);
+    }
+
     /**
      * Get dashboard statistics
      */
@@ -18,58 +52,26 @@ class DashboardController extends Controller
     {
         try {
             $totalBooks = Book::count();
-            $availableBooks = Book::whereHas('status', function ($q) {
-                $q->where('title', 'Available');
-            })->count();
-
-            $borrowedBooks = Book::whereHas('status', function ($q) {
-                $q->where('title', 'Borrowed');
-            })->count();
-
-            // Get actual borrowed this week count from BookLoan
-            $borrowedThisWeek = BookLoan::where('loan_date', '>=', Carbon::now()->startOfWeek())
-                ->whereNull('return_date')
-                ->count();
-
-            // Get pending returns (overdue books)
-            $pendingReturns = BookLoan::whereNull('return_date')
-                ->where('due_date', '<', Carbon::today())
-                ->count();
-
-            // Get today's active loans
-            $todaysLoans = BookLoan::whereDate('loan_date', Carbon::today())
-                ->whereNull('return_date')
-                ->count();
+            $availableBooks = Book::where('status', 'Available')->count();
+            $borrowedBooks = Book::where('status', 'Borrowed')->count();
+            $borrowedThisWeek = Transaction::where('borrowed_at', '>=', Carbon::now()->startOfWeek())->count();
+            $pendingReturns = Transaction::whereNull('returned_at')->where('due_at', '<', Carbon::today())->count();
+            $todaysLoans = Transaction::whereDate('borrowed_at', Carbon::today())->count();
 
             return [
                 'borrowed_books_count' => $borrowedBooks,
-                'todays_visitors' => User::whereDate('last_login_at', Carbon::today())->count(),
                 'total_books' => $totalBooks,
                 'available_books' => $availableBooks,
                 'borrowed_this_week' => $borrowedThisWeek,
-                'visitors_this_month' => User::where('last_login_at', '>=', Carbon::now()->startOfMonth())->count(),
-                'new_additions' => Book::where('created_at', '>=', Carbon::now()->subMonth())->count(),
-                'availability_percentage' => $totalBooks > 0 ? round(($availableBooks / $totalBooks) * 100) : 0,
-                'total_members' => User::count(),
                 'pending_returns' => $pendingReturns,
                 'todays_loans' => $todaysLoans,
                 'success' => true,
             ];
         } catch (\Exception $e) {
+            // Return empty stats on error
             return [
-                'borrowed_books_count' => 24,
-                'todays_visitors' => 156,
-                'total_books' => 2847,
-                'available_books' => 1923,
-                'borrowed_this_week' => 2,
-                'visitors_this_month' => 12,
-                'new_additions' => 45,
-                'availability_percentage' => 67,
-                'total_members' => 125,
-                'pending_returns' => 3,
-                'todays_loans' => 5,
                 'success' => false,
-                'message' => 'Using sample data: ' . $e->getMessage(),
+                'message' => 'Could not fetch stats: ' . $e->getMessage(),
             ];
         }
     }
@@ -80,91 +82,27 @@ class DashboardController extends Controller
     public function getRecentBooks(Request $request = null)
     {
         try {
-            $limit = 10;
-            if ($request) {
-                $limit = $request->get('limit', 10);
-            }
+            $limit = $request ? $request->get('limit', 10) : 10;
+            $books = Book::with('authors')->latest()->limit($limit)->get();
 
-            // Start with basic query
-            $books = Book::orderBy('created_at', 'desc')->limit($limit)->get();
-
-            \Log::info('Books fetched: ' . $books->count());
-
-            // If no books, return empty
-            if ($books->isEmpty()) {
-                \Log::warning('No books found in database');
-                return [
-                    'data' => [],
-                    'total' => Book::count(),
-                    'available_count' => 0,
-                    'borrowed_count' => 0,
-                ];
-            }
-
-            // Map the books
             $mappedBooks = $books->map(function ($book) {
-                try {
-                    // Safely get relationships
-                    $authors = $book->authors ? $book->authors->map(function ($author) {
-                        return trim(($author->first_name ?? '') . ' ' . ($author->last_name ?? ''));
-                    })->join(', ') : 'Unknown Author';
-
-                    $status = $book->status ? $book->status->title : 'Unknown';
-
-                    // Get latest loan if it exists
-                    $latestLoan = null;
-                    if ($book->bookLoans) {
-                        $latestLoan = $book->bookLoans
-                            ->where('return_date', null)
-                            ->sortByDesc('loan_date')
-                            ->first();
-                    }
-
-                    return [
-                        'id' => $book->id,
-                        'title' => $book->title,
-                        'author' => $authors,
-                        'status' => $status,
-                        'date_borrowed' => $latestLoan ? $latestLoan->loan_date->format('Y-m-d') : null,
-                        'borrower_name' => $latestLoan && isset($latestLoan->borrower) ? $latestLoan->borrower->name : null,
-                        'isbn' => $book->isbn ?? 'N/A',
-                        'cover_url' => $book->cover_url ?? null,
-                        'due_date' => $latestLoan ? $latestLoan->due_date->format('Y-m-d') : null,
-                    ];
-                } catch (\Exception $e) {
-                    \Log::error('Error mapping book: ' . $e->getMessage());
-                    // Return minimal data for this book
-                    return [
-                        'id' => $book->id,
-                        'title' => $book->title,
-                        'author' => 'Unknown',
-                        'status' => 'Unknown',
-                        'date_borrowed' => null,
-                        'borrower_name' => null,
-                        'isbn' => $book->isbn ?? 'N/A',
-                        'cover_url' => $book->cover_url ?? null,
-                        'due_date' => null,
-                    ];
-                }
-            })->values();
+                return [
+                    'id' => $book->id,
+                    'title' => $book->title,
+                    'author' => $book->authors->pluck('name')->join(', ') ?: 'Unknown Author',
+                    'date_added' => $book->created_at->format('M d, Y'),
+                ];
+            });
 
             return [
                 'data' => $mappedBooks,
                 'total' => Book::count(),
-                'available_count' => Book::whereHas('status', function ($q) {
-                    $q->where('title', 'Available');
-                })->count(),
-                'borrowed_count' => Book::whereHas('status', function ($q) {
-                    $q->where('title', 'Borrowed');
-                })->count(),
             ];
         } catch (\Exception $e) {
             \Log::error('getRecentBooks error: ' . $e->getMessage());
             return [
                 'data' => [],
                 'total' => 0,
-                'available_count' => 0,
-                'borrowed_count' => 0,
                 'error' => $e->getMessage(),
             ];
         }

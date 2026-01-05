@@ -16,11 +16,10 @@ return new class extends Migration
             $table->string('title');
             $table->string('isbn')->nullable()->unique();
             $table->integer('publication_year')->nullable();
-            $table->foreignId('status_id')->constrained('statuses'); // Also assuming status is statuses, checked earlier
+            $table->string('status')->default('Available');
             $table->timestamps();
 
             $table->index('title');
-            $table->index('status_id');
         });
     }
 

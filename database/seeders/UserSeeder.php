@@ -6,6 +6,8 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use App\Models\User;
+use App\Models\Role;
 
 class UserSeeder extends Seeder
 {
@@ -16,54 +18,61 @@ class UserSeeder extends Seeder
      */
     public function run()
     {
-        $users = [
+        // Define user data without position_id
+        $userData = [
             [
-                'first_name' => 'John',
-                'last_name' => 'Doe',
+                'name' => 'John Doe',
                 'email' => 'john.doe@admin.com',
                 'email_verified_at' => Carbon::now(),
                 'password' => Hash::make('password123'),
-                'position_id' => 1, // Make sure this position exists in positions table
-                'status_id' => 1, // Make sure this status exists in status table
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
-                'first_name' => 'Jane',
-                'last_name' => 'Smith',
+                'name' => 'Jane Smith',
                 'email' => 'jane.smith@librarian.com',
                 'email_verified_at' => Carbon::now(),
                 'password' => Hash::make('password123'),
-                'position_id' => 2,
-                'status_id' => 1,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
-                'first_name' => 'Michael',
-                'last_name' => 'Johnson',
+                'name' => 'Michael Johnson',
                 'email' => 'michael.johnson@student.com',
                 'email_verified_at' => null,
                 'password' => Hash::make('password123'),
-                'position_id' => 3,
-                'status_id' => 1,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ],
             [
-                'first_name' => 'Sarah',
-                'last_name' => 'Williams',
+                'name' => 'Sarah Williams',
                 'email' => 'sarah.williams@faculty.com',
                 'email_verified_at' => Carbon::now(),
                 'password' => Hash::make('password123'),
-                'position_id' => 4,
-                'status_id' => 1,
                 'created_at' => Carbon::now(),
                 'updated_at' => Carbon::now(),
             ]
         ];
 
         // Insert users
-        DB::table('users')->insert($users);
+        DB::table('users')->insert($userData);
+
+        // Assign roles based on email
+        $this->assignRoles();
+    }
+
+    private function assignRoles()
+    {
+        $roleMapping = [
+            'admin' => Role::where('slug', 'admin')->first(),
+            'librarian' => Role::where('slug', 'librarian')->first(),
+            'student' => Role::where('slug', 'student')->first(),
+            'faculty' => Role::where('slug', 'faculty')->first(),
+        ];
+
+        User::where('email', 'like', '%@admin.com')->first()->roles()->attach($roleMapping['admin']);
+        User::where('email', 'like', '%@librarian.com')->first()->roles()->attach($roleMapping['librarian']);
+        User::where('email', 'like', '%@student.com')->first()->roles()->attach($roleMapping['student']);
+        User::where('email', 'like', '%@faculty.com')->first()->roles()->attach($roleMapping['faculty']);
     }
 }

@@ -1,28 +1,27 @@
 import { Card } from '@/components/ui/card';
-import { dashboard, login, register } from '@/routes';
+import { dashboard, login } from '@/routes';
 import { type SharedData } from '@/types';
 import { Button, Input } from '@headlessui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Label } from '@radix-ui/react-label';
 import { useState } from 'react';
 
-export default function Welcome({
-    canRegister = true,
-}: {
-    canRegister?: boolean;
-}) {
+interface AttendanceResponse {
+    success: boolean;
+    message: string;
+    action?: 'check_in' | 'check_out';
+    error?: string;
+}
+
+export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
 
     const [idNumber, setIdNumber] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
-    const [recentIdNumber, setRecentIdNumber] = useState(null);
-    const [error, setError] = useState(null);
-    // const navigate = useNavigate();
-
-    // const handleLogin = () => {
-    //     navigate('/login');
-    // };
+    const [successMessage, setSuccessMessage] = useState('');
+    const [lastAction, setLastAction] = useState<'check_in' | 'check_out' | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,44 +30,54 @@ export default function Welcome({
         if (!trimmedId) return;
 
         setIsLoading(true);
+        setError(null);
+        setShowSuccess(false);
 
         try {
-            // First, find the user by their identifier (ID number, email, etc.)
-            // Adjust the column name based on your users table structure
-            // const { data: userData, error: userError } = await supabase
-            // 	.from('users') // or whatever your user table is called
-            // 	.select('id')
-            // 	.or(
-            // 		`id_number.eq.${trimmedId},email.eq.${trimmedId},username.eq.${trimmedId}`
-            // 	)
-            // 	.single();
+            const response = await fetch('/attendance/record', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+                },
+                body: JSON.stringify({ idNumber: trimmedId }),
+            });
 
-            // if (userError || !userData) {
-            //     throw new Error('User not found');
-            // }
+            const data: AttendanceResponse = await response.json();
 
-            // // Then insert the log with the actual user UUID
-            // const { data, error } = await supabase
-            //     .from('log')
-            //     .insert([{ user_id: userData.id }])
-            //     .select();
+            if (data.success) {
+                setShowSuccess(true);
+                setSuccessMessage(data.message);
+                setLastAction(data.action || null);
+                setIdNumber('');
 
-            setIsLoading(false);
-            setShowSuccess(true);
+                setTimeout(() => {
+                    setShowSuccess(false);
+                }, 3000);
+            } else {
+                if (data.error === 'USER_NOT_FOUND_OR_INACTIVE') {
+                    setError('User not found or is inactive. Please check the ID and try again.');
+                } else {
+                    setError(data.message || 'An unknown error occurred.');
+                }
+                setIdNumber('');
+
+                setTimeout(() => {
+                    setError(null);
+                }, 5000);
+            }
+        } catch (err) {
+            setError('A network error occurred. Please try again.');
             setIdNumber('');
-            // setRecentIdNumber(trimmedId);
-            setTimeout(() => setShowSuccess(false), 3000);
-        } catch (error) {
+            setTimeout(() => {
+                setError(null);
+            }, 5000);
+        } finally {
             setIsLoading(false);
-            // setError(
-            //     error.message === 'User not found'
-            //         ? 'User not found. Please check the ID.'
-            //         : 'Failed to log attendance. Please try again.'
-            // );
-            setTimeout(() => setError(null), 5000);
-            setIdNumber('');
         }
     };
+
     return (
         <>
             <Head title="Welcome">
@@ -147,7 +156,7 @@ export default function Welcome({
                                     </p>
                                 </div>
 
-                                <form onSubmit={handleSubmit} className="space-y-5">
+                                <div onSubmit={handleSubmit} className="space-y-5">
                                     <div>
                                         <Label htmlFor="idnum" className="sr-only">ID Number</Label>
                                         <div className="relative">
@@ -165,12 +174,14 @@ export default function Welcome({
                                                 className="block w-full pl-10 pr-3 py-3 border border-gray-700 rounded-lg leading-5 bg-gray-900/50 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-colors"
                                                 required
                                                 disabled={isLoading}
+                                                autoComplete="off"
                                             />
                                         </div>
                                     </div>
 
                                     <Button
                                         type="submit"
+                                        onClick={handleSubmit}
                                         className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-900 transition-all transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed"
                                         disabled={!idNumber.trim() || isLoading}
                                     >
@@ -187,8 +198,13 @@ export default function Welcome({
 
                                     {/* Status Message Area */}
                                     {showSuccess && (
-                                        <div className="mt-4 p-3 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-sm text-center animate-fade-in-up">
-                                            Attendance logged successfully!
+                                        <div className="mt-4 p-4 rounded-lg bg-green-500/20 border border-green-500/30 text-green-300 text-sm text-center animate-fade-in-up space-y-2">
+                                            <div className="font-semibold">{successMessage}</div>
+                                            {lastAction && (
+                                                <div className="text-xs text-green-400/60 uppercase tracking-wider">
+                                                    Status: {lastAction === 'check_in' ? '✓ Checked In' : '✓ Checked Out'}
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                     {error && (
@@ -196,7 +212,7 @@ export default function Welcome({
                                             {error}
                                         </div>
                                     )}
-                                </form>
+                                </div>
                                 <div className="mt-6 pt-6 border-t border-gray-800 text-center">
                                     <p className="text-xs text-gray-500">
                                         Protected by Athenaeum Security
