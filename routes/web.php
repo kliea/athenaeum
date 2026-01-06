@@ -3,8 +3,7 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
-use App\Http\Controllers\TransactionController;
-use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\BookLoanController;
 use App\Http\Controllers\UserController;
 use App\Models\Transaction;
 use Illuminate\Support\Facades\Route;
@@ -25,8 +24,9 @@ Route::prefix('attendance')->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
+    Route::get('dashboard', function () {
+        return Inertia::render('dashboard');
+    })->name('dashboard');
     Route::get('usermanagement', [UserController::class, 'index'])->name('usermanagement');
 
     // Borrow/Return Page
@@ -43,11 +43,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('borrowreturn');
 
     // Borrow/Return Actions
-    Route::post('borrow', [TransactionController::class, 'borrow'])->name('transactions.borrow');
-    Route::post('return', [TransactionController::class, 'return'])->name('transactions.return');
+    Route::post('borrowBook', [BookLoanController::class, 'borrow'])->name('loans.borrow');
+    Route::post('returnBook', [BookLoanController::class, 'return'])->name('loans.return');
+    Route::post('loans/manual', [BookLoanController::class, 'store'])->name('loans.manual');
+    Route::get('loans/history', [BookLoanController::class, 'history'])->name('loans.history');
+    Route::get('loans/active', [BookLoanController::class, 'active'])->name('loans.active');
 
-    // Other management routes
-    Route::get('/dashboard/stats', [DashboardController::class, 'getStats']);
     Route::get('bookmanagement', [BookController::class, 'index'])->name('bookmanagement');
     Route::resource('books', BookController::class)->except(['index']);
     Route::resource('authors', AuthorController::class);
