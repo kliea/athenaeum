@@ -21,10 +21,6 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
-
-        $middleware->alias([
-            'role.management' => \App\Http\Middleware\EnsureUserHasManagementRole::class,
-        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

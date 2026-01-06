@@ -19,9 +19,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'last_name',
         'email',
         'password',
+        'position_id',
+        'status_id',
     ];
 
     /**
@@ -47,50 +50,36 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
-            'is_active' => 'boolean',
         ];
     }
     // Relationships
-    public function attendanceLogs()
+    public function position()
     {
-        return $this->hasMany(AttendanceLog::class);
+        return $this->belongsTo(Position::class);
     }
 
-    /**
-     * Get all of the transactions for the User.
-     */
-    public function transactions()
+    public function status()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->belongsTo(Status::class);
     }
 
-    /**
-     * The roles that belong to the user.
-     */
-    public function roles()
+    public function staff()
     {
-        return $this->belongsToMany(Role::class);
+        return $this->hasOne(Staff::class);
     }
 
-    /**
-     * Check if the user has a specific role.
-     *
-     * @param string $slug
-     * @return bool
-     */
-    public function hasRole(string $slug): bool
+    public function isStaff()
     {
-        return $this->roles()->where('slug', $slug)->exists();
+        return $this->staff !== null;
     }
 
-    /**
-     * Check if the user has any of the given roles.
-     *
-     * @param array $slugs
-     * @return bool
-     */
-    public function hasAnyRole(array $slugs): bool
+    public function borrowedBooks()
     {
-        return $this->roles()->whereIn('slug', $slugs)->exists();
+        return $this->hasMany(BookLoan::class, 'borrower_id');
+    }
+
+    public function processedLoans()
+    {
+        return $this->hasMany(BookLoan::class, 'staff_id');
     }
 }

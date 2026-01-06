@@ -43,8 +43,8 @@ export default function Dashboard() {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Dashboard" />
-            <div className='p-8 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen text-white'>
-                {/* Header */}
+            <div className='p-8 bg-gradient-to-b from-gray-900 via-gray-800 to-gray-900 min-h-screen'>
+                {/* Header Section */}
                 <div className='mb-8'>
                     <h1 className='text-4xl font-bold text-white mb-2'>
                         Library Dashboard

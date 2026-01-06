@@ -1,4 +1,5 @@
 <?php
+// app/Models/Book.php
 
 namespace App\Models;
 
@@ -13,15 +14,73 @@ class Book extends Model
         'title',
         'isbn',
         'publication_year',
-        'status',
-        'author', // Assuming author is a string as per ERD
+        'status_id',
     ];
 
-    /**
-     * Get all of the transactions for the Book.
-     */
-    public function transactions()
+    protected $casts = [
+        'publication_year' => 'integer',
+    ];
+
+    // Relationships
+    public function status()
     {
-        return $this->hasMany(Transaction::class);
+        return $this->belongsTo(Status::class);
+    }
+
+    public function authors()
+    {
+        return $this->belongsToMany(Author::class, 'book_authors')
+            ->withTimestamps();
+    }
+
+    public function loans()
+    {
+        return $this->hasMany(BookLoan::class);
+    }
+
+    // Helpers
+    public function getCurrentLoanAttribute()
+    {
+        return $this->loans()->whereNull('return_date')->first();
+    }
+
+    public function getIsAvailableAttribute()
+    {
+        return $this->status->title === 'Available' && !$this->currentLoan;
+    }
+
+    // Scopes
+    public function scopeAvailable($query)
+    {
+        return $query->whereHas('status', function ($q) {
+            $q->where('title', 'Available');
+        })->whereDoesntHave('loans', function ($q) {
+            $q->whereNull('return_date');
+        });
+    }
+
+    public function scopeBorrowed($query)
+    {
+        return $query->whereHas('loans', function ($q) {
+            $q->whereNull('return_date');
+        });
+    }
+
+    public function scopeByAuthor($query, $authorName)
+    {
+        return $query->whereHas('authors', function ($q) use ($authorName) {
+            $q->where('first_name', 'like', "%{$authorName}%")
+                ->orWhere('last_name', 'like', "%{$authorName}%");
+        });
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->where('title', 'like', "%{$search}%")
+            ->orWhere('isbn', 'like', "%{$search}%")
+            ->orWhereHas('authors', function ($q) use ($search) {
+                $q->where('first_name', 'like', "%{$search}%")
+                    ->orWhere('last_name', 'like', "%{$search}%");
+            });
     }
 }
